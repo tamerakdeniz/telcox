@@ -27,6 +27,8 @@ else
 fi
 
 kubectl apply -k k8s/local
+kubectl -n telcox-local rollout status deploy/redis --timeout=180s
+kubectl -n telcox-local rollout status deploy/kafka --timeout=180s
 kubectl -n telcox-local rollout status deploy/discovery-server --timeout=180s
 kubectl -n telcox-local rollout status deploy/config-server --timeout=180s
 kubectl -n telcox-local rollout status deploy/api-gateway --timeout=180s

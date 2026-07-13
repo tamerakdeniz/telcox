@@ -27,6 +27,8 @@ spec:
           env:
             - name: JAVA_OPTS
               value: "-Xms256m -Xmx384m"
+            - name: SPRING_PROFILES_ACTIVE
+              value: "native,prod"
           readinessProbe:
             httpGet:
               path: /actuator/health
