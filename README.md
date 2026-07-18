@@ -1,382 +1,256 @@
-# Telco CRM Platform
+# TelcoX Signal Atlas
 
-Telekomünikasyon CRM platformu — Spring Boot 4 + Java 21 ile geliştirilen, **microservices** mimarisi, **database-per-service** ve **multi-module Maven** paternlerini uygulayan eğitim projesi.
+## Takım Üyeleri
 
-Detaylı analiz: [`/Users/tamerakdeniz/Personal/telcox/docs/telco-crm-microservices-mvp 2026-05-15 pmt 18.41.50.docx`](../docs/)
+| Üye | Sorumluluklar |
+|---|---|
+| Mustafa Tamer Akdeniz | PM, PO, Frontend, Backend, DevOps |
+| Bahadır Sina Terzioğlu | Backend, DevOps, Test |
+| Kevser Kahraman | Backend, Test, DB |
+| Doğa Dedeakayoğulları | Backend, Test, DB |
 
-ER diyagramları: [`docs/microservice-er-diagrams/`](../docs/microservice-er-diagrams/)
+## Proje Özeti
 
----
+TelcoX Signal Atlas, telekomünikasyon şirketlerinin müşteri yaşam döngüsünü uçtan uca yönetmesi için geliştirilen mikroservis tabanlı bir CRM ve operasyon platformudur. Proje; müşteri/KYC, ürün kataloğu, sipariş saga süreci, abonelik, kullanım, faturalama, ödeme, bildirim, destek talepleri ve platform operasyonlarını tek bir mimari altında toplar.
 
-## Mimari Özet
+Bitirme projesi kapsamında amaç, tek parça bir CRM uygulaması yerine ölçeklenebilir, izlenebilir ve test edilebilir bir mikroservis platformu tasarlamaktır. Her bounded context kendi veritabanına sahiptir; servisler arası tutarlılık API sözleşmeleri, Kafka eventleri, outbox/inbox yaklaşımı ve lokal projection tabloları ile sağlanır.
 
-### Database-per-Service Pattern
-Her mikroservis **kendi PostgreSQL container'ına** sahiptir. Servisler arası referanslar `FOREIGN KEY` ile değil, **UUID/business key** ile tutulur. Tutarlılık `Outbox + Inbox (Processed Event)` pattern ile event-driven sağlanır.
+## Kapsam
 
-> **Port stratejisi:** Tüm host portları **1xxxx** aralığına shift edildi (örn. PostgreSQL `5432` → host `15432`) ki yerel makinede çalışan başka projelerle (örn. ayrı bir PostgreSQL, başka bir Spring app) çakışmasın. Container içindeki portlar **standart kalır**; servisler birbirini hâlâ `9001`, `5432`, `8761`, vb. üzerinden bulur.
+| Alan | Açıklama |
+|---|---|
+| Müşteri yönetimi | Müşteri kaydı, KYC kararı, adres, iletişim, belge, izin, not ve audit kayıtları |
+| Ürün kataloğu | Ürün, kategori, plan, fiyat, özellik ve aktif/pasif katalog yönetimi |
+| Sipariş yönetimi | Yeni hat siparişi, iptal, customer/tariff snapshot ve saga geçmişi |
+| Abonelik | Hat aktivasyonu, askıya alma, yeniden aktifleştirme, fesih, ek paket ve MNP süreçleri |
+| Kullanım | CDR işleme, kota okuma, eşik aşımı ve overage event üretimi |
+| Faturalama | Billing account, bill-run, invoice, invoice item, vergi ve PDF üretimi |
+| Ödeme | Ödeme işleme, idempotency guard, retry policy ve retry schedule |
+| Bildirim | Bildirim şablonları, gönderimler ve müşteri tercih projection'ı |
+| Destek | Ticket oluşturma, listeleme, detay görüntüleme ve SLA atama |
+| Operasyon arayüzü | React tabanlı Signal Atlas paneli, BFF aggregation ve platform ops görünümü |
 
-| Servis | Container Port | PostgreSQL Container | Host Port (PG) | Host Port (App) | Database |
-|---|---|---|---|---|---|
-| `api-gateway` | 8080 | — | — | **18080** | — |
-| `discovery-server` (Eureka) | 8761 | — | — | **18761** | — |
-| `config-server` | 8888 | — | — | **18888** | — |
-| `bff-service` | 9011 | — | — | **19011** | — |
-| `identity-service` | 9001 | `identity-postgres` | **15432** | **19001** | `identity_db` |
-| `customer-service` | 9002 | `customer-postgres` | **15433** | **19002** | `customer_db` |
-| `product-catalog-service` | 9003 | `product-postgres` | **15434** | **19003** | `product_db` |
-| `order-service` | 9004 | `order-postgres` | **15435** | **19004** | `order_db` |
-| `subscription-service` | 9005 | `subscription-postgres` | **15436** | **19005** | `subscription_db` |
-| `usage-service` | 9006 | `usage-postgres` | **15437** | **19006** | `usage_db` |
-| `billing-service` | 9007 | `billing-postgres` | **15438** | **19007** | `billing_db` |
-| `payment-service` | 9008 | `payment-postgres` | **15439** | **19008** | `payment_db` |
-| `notification-service` | 9009 | `notification-postgres` | **15440** | **19009** | `notification_db` |
-| `ticket-service` | 9010 | `ticket-postgres` | **15441** | **19010** | `ticket_db` |
+## Teknolojiler
 
-### Destek servislerinin host portları
+| Katman | Teknoloji |
+|---|---|
+| Backend | Java 21, Spring Boot 4.0.6, Spring Cloud 2025.1.1 |
+| API | Spring Web/WebFlux, Spring Cloud Gateway, Springdoc OpenAPI |
+| Frontend | React 19, TypeScript 6, Vite 8, Lucide React |
+| Veri | PostgreSQL 16, Flyway, Spring Data JPA, Hibernate |
+| Event ve mesajlaşma | Apache Kafka, Debezium Kafka Connect, transactional outbox |
+| Cache ve idempotency | Redis 7 |
+| Kimlik ve güvenlik | Spring Security, OAuth2 Resource Server, Keycloak JWT, gateway header relay |
+| Resilience | Resilience4j, rate limit, timeout ve kontrollü upstream çağrıları |
+| Gözlemlenebilirlik | Actuator, Micrometer, Prometheus, Grafana, OpenTelemetry, Zipkin |
+| Test ve kalite | JUnit 5, Mockito, Testcontainers, JaCoCo, SonarCloud |
+| DevOps | Docker Compose, Kubernetes/Kustomize, GitHub Actions, GHCR image publish |
 
-| Servis | Host Port | Container Port |
-|---|---|---|
-| Redis | **16379** | 6379 |
-| Kafka (broker) | **19092** | 9092 |
-| Kafka UI | **18090** | 8080 |
-| Kafka Connect (Debezium) | **18084** | 8083 |
-| Keycloak | **18083** | 8080 |
-| Keycloak PostgreSQL | **15442** | 5432 |
-| Zipkin | **19411** | 9411 |
-| Prometheus | **19090** | 9090 |
-| Grafana | **13000** | 3000 |
-| MailHog SMTP | **11025** | 1025 |
-| MailHog Web | **18025** | 8025 |
-| pgAdmin | **15050** | 80 |
+## Mikroservis Mimarisi
 
-> **Önemli:** Her mikroservis kendine ait **bağımsız bir PostgreSQL Docker container'ı** üzerinde çalışır. Container'lar tek bir Docker network (`telcox-net`) üzerinde haberleşir; servisler birbirinin DB'sine doğrudan erişemez, core akışlarda **Kafka event'leri** ve ihtiyaç halinde açıkça belgelenmiş query API'leri ile haberleşir.
+```mermaid
+flowchart LR
+    UI["Signal Atlas Web\nReact + Vite"] --> GW["API Gateway\nSecurity, CORS, Rate Limit"]
+    GW --> BFF["BFF Service\nDashboard, Customer 360, Platform Ops"]
+    GW --> ID["Identity Service"]
+    GW --> CUS["Customer Service"]
+    GW --> CAT["Product Catalog Service"]
+    GW --> ORD["Order Service"]
+    GW --> SUB["Subscription Service"]
+    GW --> USG["Usage Service"]
+    GW --> BILL["Billing Service"]
+    GW --> PAY["Payment Service"]
+    GW --> NOTIF["Notification Service"]
+    GW --> TCK["Ticket Service"]
 
-### Multi-Module Maven Yapısı
+    ORD <--> KAFKA["Kafka Event Backbone"]
+    CUS <--> KAFKA
+    SUB <--> KAFKA
+    USG <--> KAFKA
+    BILL <--> KAFKA
+    PAY <--> KAFKA
+    NOTIF <--> KAFKA
+    TCK <--> KAFKA
+
+    DBZ["Debezium Connect"] --> KAFKA
+    PROM["Prometheus + Grafana"] -. metrics .- GW
+    ZIP["Zipkin"] -. traces .- BFF
 ```
-telco-crm-platform/                  (parent POM — BOM ve modül listesi)
-├── docker-compose.yml               (tüm sistemi ayağa kaldırır)
-├── telco-common/                    (paylaşılan kütüphane: DTO, exception, event)
-├── infrastructure/
-│   ├── discovery-server/            (Eureka)
-│   ├── config-server/               (Spring Cloud Config - native, classpath)
-│   └── api-gateway/                 (Spring Cloud Gateway)
-└── services/
-    ├── bff-service/                 (Frontend aggregation ve operation status API)
-    ├── identity-service/            (her servis kendi Dockerfile'ı ile)
-    ├── customer-service/
-    ├── product-catalog-service/
-    ├── order-service/
-    ├── subscription-service/
-    ├── usage-service/
-    ├── billing-service/
-    ├── payment-service/
-    ├── notification-service/
-    └── ticket-service/
+
+## Mimari Katmanlar
+
+| Katman | Rol |
+|---|---|
+| Sunum katmanı | `frontend/` altında Signal Atlas operasyon arayüzü bulunur. Kullanıcı; müşteri, sipariş, kullanım, fatura, ödeme, bildirim, ticket ve platform sağlığını tek panelden izler. |
+| Gateway katmanı | `api-gateway` güvenlik, CORS, rate limit, correlation id, JWT doğrulama ve servis yönlendirme sorumluluğunu taşır. |
+| BFF katmanı | `bff-service` frontend için dashboard summary, customer 360, onboarding operation status, SSE status stream ve platform ops verilerini birleştirir. |
+| Domain servisleri | Her iş alanı kendi Spring Boot servisi, domain modeli, repository katmanı ve Flyway migration'ları ile ayrılmıştır. |
+| Veri katmanı | Her servis ayrı PostgreSQL veritabanı kullanır. Servisler başka servislerin veritabanına doğrudan erişmez. |
+| Event katmanı | Domain değişiklikleri outbox tablolarına yazılır; Debezium/Kafka ile topic'lere taşınır; consumer tarafında idempotent processing uygulanır. |
+| Operasyon katmanı | Docker Compose, Kubernetes manifestleri, Prometheus, Grafana, Zipkin, Kafka UI, MailHog ve pgAdmin ile lokal/CI ortamı desteklenir. |
+
+## Servis Haritası
+
+| Servis | Sorumluluk | Veri Sahipliği |
+|---|---|---|
+| `api-gateway` | Dış trafik, güvenlik, route ve rate limit | DB yok |
+| `bff-service` | Frontend aggregation, dashboard, customer 360, platform ops | Redis cache |
+| `identity-service` | Kullanıcı profili, Keycloak adapter alanları, audit | `identity_db` |
+| `customer-service` | Müşteri, KYC, iletişim, belge, izin, not, KVKK audit | `customer_db` |
+| `product-catalog-service` | Ürün, kategori, plan, fiyat ve katalog versiyonları | `product_db` |
+| `order-service` | Sipariş, saga geçmişi, customer/tariff projection | `order_db` |
+| `subscription-service` | Abonelik yaşam döngüsü, ek paket, MNP | `subscription_db` |
+| `usage-service` | CDR, kota, threshold ve overage eventleri | `usage_db` |
+| `billing-service` | Billing account, invoice, bill-run, vergi, PDF | `billing_db` |
+| `payment-service` | Ödeme, retry, idempotency ve ödeme durumu | `payment_db` |
+| `notification-service` | Bildirim gönderimi, şablon ve tercih projection'ı | `notification_db` |
+| `ticket-service` | Destek talebi ve SLA atama | `ticket_db` |
+
+## DB ve Event Akışı
+
+```mermaid
+sequenceDiagram
+    participant UI as Signal Atlas
+    participant GW as API Gateway
+    participant BFF as BFF
+    participant SVC as Domain Service
+    participant DB as Service PostgreSQL
+    participant OUT as Outbox Table
+    participant DBZ as Debezium Connect
+    participant K as Kafka Topic
+    participant C as Consumer Service
+    participant P as Projection / Processed Event
+
+    UI->>GW: API isteği
+    GW->>BFF: Kullanıcı bağlamı + correlation id
+    BFF->>SVC: Query veya command
+    SVC->>DB: Domain state değişikliği
+    SVC->>OUT: Aynı transaction içinde outbox kaydı
+    DBZ->>OUT: Logical replication ile okuma
+    DBZ->>K: telcox.<context>.<event>.v1
+    K->>C: Event tüketimi
+    C->>P: Idempotent kayıt ve lokal projection güncelleme
 ```
 
----
+DB tasarımında temel kurallar şunlardır:
 
-## Teknoloji Yığını
+- Her mikroservis kendi PostgreSQL container ve schema yaşam döngüsünden sorumludur.
+- Cross-service `FOREIGN KEY` kullanılmaz; servisler arası referanslar UUID/business key ile tutulur.
+- Flyway migration'ları veritabanı şemasının tek kaynağıdır; Hibernate şemayı üretmek yerine doğrular.
+- Outbox eventleri Debezium connector tanımlarıyla Kafka topic'lerine taşınır.
+- Consumer tarafında `*_processed_event` tabloları ile aynı eventin tekrar işlenmesi engellenir.
+- Projection tabloları sadece tüketici servisin ihtiyaç duyduğu minimum read-model alanlarını içerir.
 
-| Katman | Teknoloji | Versiyon |
+## İş Akışı
+
+```mermaid
+flowchart TD
+    A["Identity ve yetki bağlamı"] --> B["Customer registration ve KYC"]
+    B --> C["Product catalog plan seçimi"]
+    C --> D["Order saga başlatma"]
+    D --> E["Subscription aktivasyonu"]
+    E --> F["Usage CDR ve kota takibi"]
+    F --> G["Billing bill-run ve invoice"]
+    G --> H["Payment işleme ve retry"]
+    H --> I["Notification gönderimi"]
+    I --> J["Ticket ve SLA takibi"]
+    J --> K["BFF dashboard / Customer 360 / Platform Ops"]
+```
+
+## Signal Atlas Arayüzü
+
+Frontend, `frontend/` altında React + TypeScript ile geliştirilmiş 18 ekranlık operasyon arayüzüdür. Demo veriyle gezilebilir; canlı backend entegrasyon sözleşmeleri `frontend/src/api.ts` ve `bff-service` endpointleri üzerinden hazırlanmıştır.
+
+Ana ekranlar: Genel Bakış, Müşteriler, Müşteri 360, KYC, Katalog, Siparişler, Saga İzleyici, Abonelikler, Kullanım, Faturalama, Fatura Detayı, Ödemeler, Bildirimler, Talepler, Yönetim, Platform Ops ve Sistem Durumları.
+
+![Signal Atlas Genel Bakış](assets/screenshots/signal-atlas-overview.png)
+
+![Signal Atlas Müşteri 360](assets/screenshots/signal-atlas-customer360.png)
+
+![Signal Atlas Platform Ops](assets/screenshots/signal-atlas-platform-ops.png)
+
+## Linear Proje Takibi
+
+Proje yönetimi bitirme projesi görev dağılımına uygun şekilde Linear üzerinden yürütülmüştür. Repository içinde gerçek Linear ekran görüntüsü dosyası bulunmadığı için README sahte veya kırık görsel içermez.
+
+## Sonar Entegrasyonu
+
+Sonar entegrasyonu `sonar-project.properties` ve GitHub Actions CI içinde tanımlıdır.
+
+| Alan | Mevcut Durum |
+|---|---|
+| Proje anahtarı | `tamerakdeniz_telcox` |
+| Organizasyon | `tamerakdeniz` |
+| Kaynak analizi | `telco-common`, `telco-test-support`, `infrastructure`, `services`, `frontend/src` |
+| Test analizi | Java test klasörleri ve frontend test pattern'leri |
+| Coverage | JaCoCo XML raporları |
+| CI davranışı | `SONAR_TOKEN` varsa Maven verify sonrası Sonar analizi çalışır; yoksa CI Sonar adımını bilinçli olarak atlar. |
+
+## JUnit Testler
+
+Projede 42 Java test sınıfı bulunmaktadır. Test kapsamı sadece controller seviyesinde kalmaz; domain davranışı, servis kuralları, idempotency, retry, projection, saga ve repository entegrasyonlarını da kapsar.
+
+| Test Alanı | Örnek Kapsam |
+|---|---|
+| Unit test | Domain kuralları, servis davranışı, retry policy, idempotency guard |
+| Controller test | Customer, Identity ve BFF/API endpoint davranışları |
+| Integration test | Testcontainers ile PostgreSQL repository ve order saga akışları |
+| Ortak test desteği | `telco-test-support` modülü ile tekrar kullanılabilir test altyapısı |
+| Coverage | Maven lifecycle içinde JaCoCo raporu üretilir ve Sonar tarafından okunur |
+
+## Zipkin, Prometheus ve Grafana
+
+Tüm Spring Boot servislerinde Actuator, Prometheus metric endpointleri ve Zipkin tracing entegrasyonu yapılandırılmıştır.
+
+| Bileşen | Rol | Lokal Yüzey |
 |---|---|---|
-| Dil | Java | 21 (LTS) |
-| Framework | Spring Boot | 4.0.6 |
-| Spring Cloud | Gateway, Config, Eureka | 2025.1.1 |
-| Build | Maven Multi-Module | 3.9+ |
-| Database | PostgreSQL | 16 (her servise ayrı container) |
-| Cache / Idempotency | Redis | 7 |
-| Broker | Apache Kafka (KRaft) | 7.7.1 |
-| Migration | Flyway | (BOM) |
-| ORM | Spring Data JPA + Hibernate | (BOM) |
-| Mapping | MapStruct | 1.6.3 |
-| Auth | Spring Security + JWT (jjwt) | 0.12.6 |
-| Docs | Springdoc OpenAPI | 3.0.3 |
-| Resilience | Resilience4j | 2.4.0 |
-| Observability | Micrometer + Zipkin + OpenTelemetry | (BOM) |
-| Test | JUnit 5, Mockito, Testcontainers | 1.20.4 |
-| Container | Docker + Docker Compose v2 | — |
-| Operasyon UI | React + TypeScript + Vite | Signal Atlas |
+| Zipkin | Servisler arası trace ve latency takibi | `http://localhost:19411` |
+| Prometheus | Actuator metric scraping ve zaman serisi metrik toplama | `http://localhost:19090` |
+| Grafana | Prometheus datasource ve TelcoX dashboard görselleştirmesi | `http://localhost:13000` |
+| BFF Platform Ops | Servis sağlığı, Prometheus target durumu ve Kafka connector özetini frontend'e taşır | `/api/v1/bff/platform/ops` |
 
----
+Prometheus konfigürasyonu `docker/observability/prometheus.yml` altında; Grafana dashboard ve datasource tanımları `docker/grafana/` altında tutulur. Trace tarafında `ZIPKIN_TRACING_ENDPOINT` ve `TRACING_SAMPLING_PROBABILITY` environment değerleri kullanılır.
 
-## Observability
+## CI/CD ve Dağıtım
 
-Tüm Spring Boot servislerinde actuator Prometheus endpoint’i, OpenTelemetry tabanlı Micrometer tracing ve Zipkin export yapılandırıldı. Compose ortamında:
+GitHub Actions pipeline'ı dört ana kalite kapısından oluşur:
+
+| Job | Amaç |
+|---|---|
+| Maven verify | Tüm Java modüllerini derler, testleri çalıştırır ve JaCoCo raporu üretir. |
+| Frontend build | `frontend` uygulamasını TypeScript ve Vite build sürecinden geçirir. |
+| Kubernetes manifests | `k8s/local` Kustomize çıktısının render edilebilir olduğunu doğrular. |
+| Docker images | Push eventlerinde servis image'larını GHCR altında yayınlar. |
+
+Lokal orkestrasyon Docker Compose ile; Kubernetes hedefi ise `k8s/local` manifestleri ve `scripts/local-k8s-deploy.sh` üzerinden yönetilir.
+
+## Başlıca Erişim Yüzeyleri
 
 | Yüzey | Adres |
 |---|---|
-| Zipkin traces | http://localhost:19411 |
-| Prometheus | http://localhost:19090 |
-| Grafana | http://localhost:13000 (admin / admin) |
+| Signal Atlas web | `http://localhost:15173` veya geliştirme ortamında `http://localhost:5173` |
+| API Gateway | `http://localhost:18080` |
+| Eureka Discovery | `http://localhost:18761` |
+| Kafka UI | `http://localhost:18090` |
+| Kafka Connect | `http://localhost:18084` |
+| Zipkin | `http://localhost:19411` |
+| Prometheus | `http://localhost:19090` |
+| Grafana | `http://localhost:13000` |
+| MailHog | `http://localhost:18025` |
+| pgAdmin | `http://localhost:15050` |
 
-Loglar varsayılan olarak ECS JSON formatındadır. `X-Correlation-Id` header’ı servislerde MDC alanına taşınır ve response header olarak geri döner; trace export endpoint’i `ZIPKIN_TRACING_ENDPOINT`, örnekleme oranı `TRACING_SAMPLING_PROBABILITY` ile yönetilir.
+## Dokümantasyon
 
----
-
-## Signal Atlas Operasyon Arayüzü
-
-Stitch tasarım sistemi, `frontend/` altında 18 ekranlık gezilebilir bir React
-uygulaması olarak projeye entegre edilmiştir. Arayüz müşteri/KYC, katalog,
-sipariş saga, abonelik, kullanım, faturalama, ödeme, bildirim, ticket, yönetim
-ve platform operasyon akışlarını içerir.
-
-Backend modüllerinde REST controller katmanı henüz uygulanmadığı için arayüz
-varsayılan olarak güvenli demo modunda çalışır. Gateway route sözleşmeleri
-`frontend/src/api.ts` içinde hazırdır; canlı çağrılar şu değişken ile açılır:
-
-```bash
-VITE_ENABLE_LIVE_API=true
-```
-
-BFF endpoint sözleşmeleri `bff-service` altında canlıdır:
-
-| Endpoint | Açıklama |
+| Dosya | İçerik |
 |---|---|
-| `GET /api/v1/bff/me` | Gateway'den gelen doğrulanmış kullanıcı/rol bağlamı |
-| `GET /api/v1/bff/dashboard/summary` | Redis kısa TTL cache'li dashboard özeti |
-| `GET /api/v1/bff/customers/{customerId}/360` | Customer 360 aggregation; rol bazlı billing/ticket shaping |
-| `POST /api/v1/bff/orders/onboarding` | Yeni order command submit; operation id döner |
-| `GET /api/v1/bff/operations/{operationId}` | Polling ile saga/operation status |
-| `GET /api/v1/bff/operations/{operationId}/events` | SSE ile long-running saga status |
-
-Lokal frontend geliştirme:
-
-```bash
-cd frontend
-npm install
-npm run dev
-```
-
-Adresler:
-
-| Çalışma şekli | Adres |
-|---|---|
-| Vite development server | http://localhost:5173 |
-| Docker Compose | http://localhost:15173 |
-
-Frontend build kontrolü:
-
-```bash
-cd frontend
-npm run build
-```
-
----
-
-## Hızlı Başlangıç (Tek Komutla Tüm Sistem)
-
-### Önkoşullar
-- JDK 21
-- Maven 3.9+
-- Docker Desktop (veya Docker Engine + Compose v2)
-- Host portları **15432-15441** (PG), **16379** (Redis), **19092** (Kafka), **18090** (Kafka UI), **18084** (Kafka Connect), **19411** (Zipkin), **19090** (Prometheus), **13000** (Grafana), **11025/18025** (MailHog), **15050** (pgAdmin), **18761** (Eureka), **18888** (Config), **18080** (Gateway), **19001-19010** (servisler) boş olmalı
-
-### 1. JAR'ları Üret
-
-```bash
-cd telco-crm-platform
-mvn clean package -DskipTests
-```
-
-Bu adım `telco-common`'ı yerel Maven cache'e (`~/.m2/repository`) yazar ve 14 servis için `target/*.jar` üretir. Dockerfile'lar bu jar'ları kullanır.
-
-### 2. Tüm Sistemi Ayağa Kaldır
-
-```bash
-docker compose up -d --build
-```
-
-Bu komut sistem container'larını paralel ayağa kaldırır:
-
-| Grup | Container'lar |
-|---|---|
-| **10 ayrı PostgreSQL** | `identity-postgres`, `customer-postgres`, `product-postgres`, `order-postgres`, `subscription-postgres`, `usage-postgres`, `billing-postgres`, `payment-postgres`, `notification-postgres`, `ticket-postgres` |
-| **3 altyapı servisi** | `discovery-server` (Eureka), `config-server`, `api-gateway` |
-| **11 iş/BFF servisi** | `bff-service`, `identity-service`, `customer-service`, `product-catalog-service`, `order-service`, `subscription-service`, `usage-service`, `billing-service`, `payment-service`, `notification-service`, `ticket-service` |
-| **Destek servisler** | `redis`, `kafka`, `kafka-connect`, `kafka-ui`, `keycloak`, `keycloak-postgres`, `zipkin`, `mailhog`, `pgadmin` |
-
-Her servis kendi PG container'ını `service_healthy` ile bekler; Kafka ve discovery-server hazır olmadan açılmaz.
-
-### 3. Ayağa Kalkış Durumunu İzle
-
-```bash
-docker compose ps                           # tum container'lar
-docker compose logs -f identity-service     # tek servisin log'u
-docker compose logs --tail=50 -f            # tum sistem (uzun olur)
-```
-
-### 4. Sağlık Kontrolü
-
-| Endpoint | Adres |
-|---|---|
-| Eureka dashboard | http://localhost:18761 |
-| API Gateway routes | http://localhost:18080/actuator/gateway/routes |
-| BFF health | http://localhost:19011/actuator/health |
-| Identity Swagger | http://localhost:19001/swagger-ui.html |
-| Kafka UI | http://localhost:18090 |
-| Kafka Connect REST API | http://localhost:18084/connectors |
-| Zipkin | http://localhost:19411 |
-| Prometheus | http://localhost:19090 |
-| Grafana | http://localhost:13000 |
-| MailHog (SMTP UI) | http://localhost:18025 |
-| pgAdmin | http://localhost:15050 (admin@telcox.com / admin) |
-
-pgAdmin açılınca **10 PostgreSQL sunucusu** "Telcox CRM" grubunda otomatik tanımlı gelir; her birinin şifresi `telcox`.
-
-### 5. Sistemi Durdur / Sıfırla
-
-```bash
-docker compose down                # container'lari durdurur (veriler kalir)
-docker compose down -v             # +veri volume'lerini de siler (temiz baslangic)
-```
-
----
-
-## CI, Sonar ve Local Kubernetes
-
-GitHub Actions workflow’u `.github/workflows/ci.yml` altında:
-
-- Maven `verify`
-- Frontend `npm ci && npm run build`
-- `k8s/local` kustomize render kontrolü
-- Push event’lerinde GHCR Docker image build/push
-- `SONAR_TOKEN` tanımlıysa Sonar analizi
-
-Sonar için varsayılan proje anahtarı `tamerakdeniz_telcox`; farklı Sonar instance gerekiyorsa repository variable olarak `SONAR_HOST_URL`, secret olarak `SONAR_TOKEN` tanımlanır.
-
-Local Kind/Minikube deploy:
-
-```bash
-scripts/local-k8s-deploy.sh
-```
-
-Build atlanacaksa:
-
-```bash
-SKIP_BUILD=true scripts/local-k8s-deploy.sh
-```
-
----
-
-## Lokal Geliştirme (mvn spring-boot:run)
-
-Tüm container'ları başlatmadan, sadece **PostgreSQL** + **Kafka** + **Redis** ayağa kaldırıp tek bir servisi IDE/terminal'den çalıştırabilirsin.
-
-```bash
-# Sadece altyapi + tum PG'leri baslat
-docker compose up -d \
-  identity-postgres customer-postgres product-postgres order-postgres \
-  subscription-postgres usage-postgres billing-postgres payment-postgres \
-  notification-postgres ticket-postgres \
-  redis kafka mailhog
-
-# Discovery + Config + Gateway'i lokal calistir
-mvn -pl infrastructure/discovery-server spring-boot:run     # Terminal 1
-mvn -pl infrastructure/config-server    spring-boot:run     # Terminal 2
-mvn -pl infrastructure/api-gateway      spring-boot:run     # Terminal 3
-
-# Identity service'i lokal calistir
-mvn -pl services/identity-service spring-boot:run           # Terminal 4
-```
-
-`application.yaml` default değerleri her servisin doğru host port'una bağlanır (`identity` → `localhost:15432`, `customer` → `localhost:15433`, vb.).
-
-> `.env.example` dosyasını `.env` olarak kopyalayıp override edebilirsin.
-
----
-
-## Konfigürasyon Hiyerarşisi
-
-1. **`infrastructure/config-server/src/main/resources/config/application.yaml`** — Tüm servislerin paylaştığı ortak ayarlar (logging, actuator, resilience4j vb.)
-2. **`services/<svc>/src/main/resources/application.yaml`** — Servise özel ayarlar (port, DB adı, Kafka group-id)
-3. **Docker compose `environment:`** — Container içinde `DB_HOST`, `KAFKA_BOOTSTRAP`, `EUREKA_URL` vb. override edilir
-4. **Process env / `.env`** — Lokal `mvn spring-boot:run` çalıştırırken override için
-
----
-
-## Servis İletişim Modeli
-
-| Senaryo | Tip | Teknoloji |
-|---|---|---|
-| Gateway → Servis | Senkron | Spring Cloud Gateway + Eureka (`lb://`) |
-| Servis → Servis (query) | Senkron | Belgelenmiş query API + Resilience4j |
-| Servis → Servis (event) | Asenkron | Kafka + Outbox pattern |
-| CDR → Usage Service | Asenkron | Kafka |
-
-**Database-per-service** prensibi gereği bir mikroservis **başka bir servisin DB'sine doğrudan erişemez**. Veri ihtiyacı sadece API çağrısı veya event ile karşılanır.
-
-Mimari kararlar:
-
-- [ADR-0001: Spring Boot / Spring Cloud version baseline](docs/adr/ADR-0001-spring-boot-cloud-baseline.md)
-- [ADR-0002: Remove OpenFeign from core service communication](docs/adr/ADR-0002-remove-openfeign-from-core-service-communication.md)
-- [Event Backbone Standard](docs/event-backbone.md)
-
----
-
-## Geliştirme Notları
-
-### `ddl-auto: validate`
-Her servis Flyway ile schema yönetir. Hibernate sadece **validate** eder, asla tablo oluşturmaz. Yeni tablo eklemek için `services/<svc>/src/main/resources/db/migration/V{N}__<desc>.sql` ekle.
-
-### Outbox Pattern
-Her domain değişikliğiyle aynı transaction içinde `*_OUTBOX_EVENT` tablosuna kayıt atılır. Arka planda scheduler bu tabloyu Kafka'ya publish eder. Bkz. analiz dokümanı §9.3.
-
-### Idempotent Consumer
-Kafka'dan tüketilen her event'in `eventId`'si `*_PROCESSED_EVENT.event_id` UNIQUE constraint ile kontrol edilir; aynı event tekrar gelirse atlanır.
-
-### Projection Standardi
-Lokal read-model tablolari `<consumer>_<source>_<purpose>_projection` formatini
-kullanir. Migration, index ve event siralama kurallari
-[`docs/projection-standard.md`](docs/projection-standard.md) dosyasindadir.
-
-Notification Service customer iletisim tercihlerini
-`notification_customer_preference_projection` tablosunda tutar.
-
-### Payment Idempotency Guard
-Payment Service, ayni idempotency key ile eszamanli odeme islenmesini Redis
-uzerinde atomik `SET NX` ve TTL ile engeller. Redis key formati
-`payment:idempotency:<sha256>`; varsayilan TTL `PT24H`'dir.
-
-### Event Envelope / Topic Standardi
-Kafka domain event'leri `telco-common` icindeki `EventEnvelope<T>` sozlesmesini kullanir. Zorunlu alanlar: `eventId`, `type`, `aggregateId`, `correlationId`, `schemaVersion`.
-
-Topic formati Debezium connector ciktilariyla aynidir: `telcox.<context>.<event-type>.v1`.
-
-Retry ve DLQ formati: `<topic>.retry.0`, `<topic>.retry.1`, `<topic>.dlq`. Detaylar `docs/event-backbone.md` dosyasindadir.
-
-### `telco-common` Değişikliği
-`telco-common` modülünde değişiklik yaptıktan sonra:
-```bash
-mvn -pl telco-common -am clean install -DskipTests
-```
-sonrasında ilgili servisleri `docker compose up -d --build <service>` ile yeniden build et.
-
----
-
-## Profiller
-
-| Profile | Açıklama |
-|---|---|
-| `default` | Lokal geliştirme (localhost altyapı) |
-| `docker` | Container içinden çalıştırma (service-discovery: container adları) |
-| `prod` | Production (env var'larla yönetilen secret'lar) |
-
----
-
-## Sıradaki Adımlar (Ödev Yol Haritası)
-
-- [ ] Her servis için domain entity'leri (`@Entity`) ve repository'leri ekle
-- [ ] ER diagramına göre tüm tabloları içeren `V2__...sql` migration'larını yaz
-- [ ] REST controller + DTO + MapStruct mapper katmanları
-- [ ] OpenAPI dokümanı her servis için tamamla
-- [ ] Outbox publisher worker (`@Scheduled` + transactional outbox)
-- [ ] Kafka producer/consumer + JSON serializer config
-- [ ] JWT filter `api-gateway`'de (relay → `X-User-Id`, `X-User-Roles`)
-- [ ] Testcontainers ile integration test setup
-- [ ] CI/CD pipeline (GitHub Actions)
-
----
-
-## Lisans
-Eğitim projesi. Üretim sistemlerinde kullanılmadan önce güvenlik, performans ve uyumluluk gözden geçirilmelidir.
+| `docs/event-backbone.md` | Event envelope, topic standardı, retry/DLQ ve schema versioning |
+| `docs/projection-standard.md` | Projection tablo, migration ve index isimlendirme standardı |
+| `docs/idempotent-consumer-standard.md` | Event consumer idempotency yaklaşımı |
+| `docs/identity-service-boundary.md` | Identity service sınırları ve sorumlulukları |
+| `docs/features/payment-usage.md` | Payment ve usage özellik notları |
+| `docs/adr/` | Mimari karar kayıtları |
+| `k8s/local/README.md` | Lokal Kubernetes dağıtım notları |
+
+## Son Durum
+
+TelcoX Signal Atlas; mikroservis ayrımı, database-per-service yaklaşımı, event-driven veri yayılımı, BFF aggregation, React operasyon paneli, JUnit/Testcontainers testleri, Sonar kalite kapısı ve Zipkin/Prometheus/Grafana gözlemlenebilirliği ile bitirme projesi sunumuna uygun bütünlüklü bir platform halindedir.
